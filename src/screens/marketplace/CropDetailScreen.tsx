@@ -110,10 +110,20 @@ const CropDetailScreen: React.FC = () => {
     );
   }
   
-  // Generate image URL from IPFS hash or placeholder
-  const imageUrl = crop.ipfsHash ? 
-    ipfsService.getIPFSUrl(crop.ipfsHash) : 
-    'https://via.placeholder.com/400x300?text=No+Image';
+// Generate image URL from IPFS hash or placeholder
+const [imageUrl, setImageUrl] = useState<string>('https://via.placeholder.com/400x300?text=No+Image');
+
+useEffect(() => {
+  const fetchImageUrl = async () => {
+    if (crop?.ipfsHash) {
+      const url = await ipfsService.getFile(crop.ipfsHash);
+      setImageUrl(url ?? 'https://via.placeholder.com/400x300?text=No+Image');
+    } else {
+      setImageUrl('https://via.placeholder.com/400x300?text=No+Image');
+    }
+  };
+  fetchImageUrl();
+}, [crop]);
   
   // Format date
   const harvestDateFormatted = new Date(crop.harvestDate * 1000).toLocaleDateString();

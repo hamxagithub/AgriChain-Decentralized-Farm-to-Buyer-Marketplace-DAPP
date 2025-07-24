@@ -1,57 +1,93 @@
-import { create } from 'ipfs-http-client';
-
-// Define the IPFS configuration - using a public gateway
-// In production, you would want to use your own IPFS node or a pinning service
-const IPFS_PROJECT_ID = 'YOUR_INFURA_PROJECT_ID';
-const IPFS_PROJECT_SECRET = 'YOUR_INFURA_PROJECT_SECRET';
-
-const auth = 'Basic ' + Buffer.from(IPFS_PROJECT_ID + ':' + IPFS_PROJECT_SECRET).toString('base64');
-
-// Connect to IPFS
-const ipfs = create({
-  host: 'ipfs.infura.io',
-  port: 5001,
-  protocol: 'https',
-  headers: {
-    authorization: auth
-  }
-});
+// Mock IPFS Service for React Native
+// In a production app, you would use a React Native compatible IPFS solution
+// or upload files to a traditional cloud storage service and store the hash
 
 class IPFSService {
-  // Upload file to IPFS
-  public async uploadFile(file: File): Promise<string | null> {
+  // Mock implementation for React Native development
+  
+  // Upload file to IPFS (mock implementation)
+  async uploadFile(fileUri: string): Promise<string | null> {
     try {
-      // Convert file to buffer
-      const buffer = await this.fileToBuffer(file);
+      console.log('Mock IPFS upload for file:', fileUri);
       
-      // Add file to IPFS
-      const result = await ipfs.add(buffer);
+      // In a real implementation, you would:
+      // 1. Read the file from the URI
+      // 2. Upload it to IPFS or cloud storage
+      // 3. Return the hash/URL
       
-      // Return the IPFS hash
-      return result.path;
+      // For now, return a mock hash
+      const mockHash = 'QmMockHash' + Date.now();
+      console.log('Mock IPFS hash generated:', mockHash);
+      
+      return mockHash;
     } catch (error) {
-      console.error('Error uploading to IPFS:', error);
+      console.error('Error uploading file to IPFS:', error);
       return null;
     }
   }
-  
-  // Convert file to buffer
-  private async fileToBuffer(file: File): Promise<Buffer> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const buffer = Buffer.from(reader.result as ArrayBuffer);
-        resolve(buffer);
-      };
-      reader.onerror = reject;
-      reader.readAsArrayBuffer(file);
-    });
+
+  // Upload JSON data to IPFS (mock implementation)
+  async uploadJSON(data: any): Promise<string | null> {
+    try {
+      console.log('Mock IPFS JSON upload:', data);
+      
+      // In a real implementation, you would:
+      // 1. Convert data to JSON
+      // 2. Upload to IPFS
+      // 3. Return the hash
+      
+      const mockHash = 'QmJSONMockHash' + Date.now();
+      console.log('Mock JSON IPFS hash generated:', mockHash);
+      
+      return mockHash;
+    } catch (error) {
+      console.error('Error uploading JSON to IPFS:', error);
+      return null;
+    }
   }
-  
-  // Get IPFS URL from hash
-  public getIPFSUrl(hash: string): string {
-    // Using a public IPFS gateway
-    return `https://ipfs.io/ipfs/${hash}`;
+
+  // Get file from IPFS (mock implementation)
+  async getFile(hash: string): Promise<string | null> {
+    try {
+      console.log('Mock IPFS file retrieval for hash:', hash);
+      
+      // In a real implementation, you would:
+      // 1. Fetch file from IPFS using the hash
+      // 2. Return the file data or URL
+      
+      // For now, return a mock URL
+      const mockUrl = `https://ipfs.io/ipfs/${hash}`;
+      console.log('Mock IPFS URL:', mockUrl);
+      
+      return mockUrl;
+    } catch (error) {
+      console.error('Error getting file from IPFS:', error);
+      return null;
+    }
+  }
+
+  // Get JSON data from IPFS (mock implementation)
+  async getJSON(hash: string): Promise<any | null> {
+    try {
+      console.log('Mock IPFS JSON retrieval for hash:', hash);
+      
+      // In a real implementation, you would:
+      // 1. Fetch JSON from IPFS using the hash
+      // 2. Parse and return the data
+      
+      // For now, return mock JSON data
+      const mockData = {
+        hash: hash,
+        timestamp: Date.now(),
+        mockData: true
+      };
+      
+      console.log('Mock JSON data:', mockData);
+      return mockData;
+    } catch (error) {
+      console.error('Error getting JSON from IPFS:', error);
+      return null;
+    }
   }
 }
 

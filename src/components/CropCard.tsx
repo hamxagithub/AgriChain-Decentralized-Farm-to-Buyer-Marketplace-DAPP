@@ -41,8 +41,22 @@ const CropCard: React.FC<CropCardProps> = ({
   };
   
   // Generate image URL from IPFS hash or placeholder
-  const imageUrl = ipfsHash ? ipfsService.getIPFSUrl(ipfsHash) : 'https://via.placeholder.com/150?text=No+Image';
-  
+  const [imageUrl, setImageUrl] = React.useState('https://via.placeholder.com/150?text=No+Image');
+
+  React.useEffect(() => {
+    let isMounted = true;
+    if (ipfsHash) {
+      const fetchImage = async () => {
+        const url = await ipfsService.getFile(ipfsHash);
+        if (isMounted && url) setImageUrl(url);
+      };
+      fetchImage();
+    } else {
+      setImageUrl('https://via.placeholder.com/150?text=No+Image');
+    }
+    return () => { isMounted = false; };
+  }, [ipfsHash]);
+
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
       <Card style={styles.card}>

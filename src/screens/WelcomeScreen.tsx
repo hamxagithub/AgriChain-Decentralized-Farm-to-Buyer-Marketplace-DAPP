@@ -3,7 +3,6 @@ import {
   View, 
   Text, 
   StyleSheet, 
-  Image, 
   SafeAreaView, 
   TouchableOpacity 
 } from 'react-native';
@@ -43,11 +42,12 @@ const WelcomeScreen: React.FC = () => {
         </View>
         
         <View style={styles.logoContainer}>
-          <Image 
-            source={require('../assets/logo.png')} 
-            style={styles.logo}
-            resizeMode="contain"
-          />
+          <View style={[styles.logoCircle, { backgroundColor: colors.primary }]}>
+            <Ionicons name="leaf" size={48} color="#FFFFFF" />
+          </View>
+          <Text style={[styles.logoText, { color: colors.primary }]}>
+            AgriChain
+          </Text>
         </View>
         
         <View style={styles.featureContainer}>
@@ -162,9 +162,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginVertical: 40,
   },
-  logo: {
-    width: 150,
-    height: 150,
+  logoCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  logoText: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
   featureContainer: {
     marginBottom: 40,
