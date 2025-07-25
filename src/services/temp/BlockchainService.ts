@@ -1,5 +1,5 @@
-import { CropListing, Status, Offer } from '../contracts/types';
-import appKitWalletService from './AppKitWalletService';
+import { CropListing, Status, Offer } from '../../contracts/types';
+import appKitWalletService from './../AppKitWalletService';
 
 
 class BlockchainService {

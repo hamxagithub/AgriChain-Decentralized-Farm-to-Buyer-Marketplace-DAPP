@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
   StyleSheet, 
   SafeAreaView, 
-  TouchableOpacity 
+  TouchableOpacity, 
+  Image,
+  Alert,
+  ActivityIndicator
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -19,15 +22,46 @@ type WelcomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList,
 const WelcomeScreen: React.FC = () => {
   const navigation = useNavigation<WelcomeScreenNavigationProp>();
   const { colors } = useTheme();
-  const { connectWallet, isConnected, isLoading, error } = useBlockchain();
+  const { connectWallet, isConnected, isLoading, error, userProfile } = useBlockchain();
   const [userType, setUserType] = useState<'farmer' | 'buyer' | null>(null);
+  const [connectingWallet, setConnectingWallet] = useState<boolean>(false);
+  
+  // Check if user is already connected
+  useEffect(() => {
+    if (isConnected && userProfile) {
+      // If user has a role set, navigate to appropriate screen
+      if (userProfile.name && userProfile.name.includes('Farmer')) {
+        setUserType('farmer');
+      } else if (userProfile.name && userProfile.name.includes('Buyer')) {
+        setUserType('buyer');
+      }
+    }
+  }, [isConnected, userProfile]);
   
   const handleConnectWallet = async () => {
-    const success = await connectWallet();
-    if (success && userType === 'farmer') {
-      navigation.navigate('FarmerTab');
-    } else if (success && userType === 'buyer') {
-      navigation.navigate('BuyerTab');
+    if (!userType) {
+      Alert.alert('Please select', 'Are you a farmer or buyer?');
+      return;
+    }
+    
+    setConnectingWallet(true);
+    try {
+      const success = await connectWallet();
+      if (success) {
+        // Navigate based on selected user type
+        if (userType === 'farmer') {
+          navigation.navigate('FarmerTab');
+        } else if (userType === 'buyer') {
+          navigation.navigate('BuyerTab');
+        }
+      } else {
+        Alert.alert('Connection Failed', 'Failed to connect to AppKitWallet. Please try again.');
+      }
+    } catch (err) {
+      console.error('Error during wallet connection:', err);
+      Alert.alert('Connection Error', 'An unexpected error occurred while connecting to AppKitWallet.');
+    } finally {
+      setConnectingWallet(false);
     }
   };
   
@@ -54,21 +88,28 @@ const WelcomeScreen: React.FC = () => {
           <View style={styles.featureItem}>
             <Ionicons name="shield-checkmark-outline" size={32} color={colors.success} />
             <Text style={[styles.featureText, { color: colors.text }]}>
-              Secure payments through smart contracts
+              Secure payments through smart contracts with escrow
             </Text>
           </View>
           
           <View style={styles.featureItem}>
             <Ionicons name="people-outline" size={32} color={colors.secondary} />
             <Text style={[styles.featureText, { color: colors.text }]}>
-              Connect directly with buyers or farmers
+              Connect directly with buyers or farmers via secure chat
             </Text>
           </View>
           
           <View style={styles.featureItem}>
             <Ionicons name="cash-outline" size={32} color={colors.primary} />
             <Text style={[styles.featureText, { color: colors.text }]}>
-              Fair prices without middlemen
+              Fair prices without middlemen using blockchain
+            </Text>
+          </View>
+          
+          <View style={styles.featureItem}>
+            <Ionicons name="wallet-outline" size={32} color={colors.warning} />
+            <Text style={[styles.featureText, { color: colors.text }]}>
+              Secure AppKitWallet integration for transactions
             </Text>
           </View>
         </View>
@@ -120,10 +161,10 @@ const WelcomeScreen: React.FC = () => {
         {error && <ErrorMessage message={error} />}
         
         <Button
-          title={isConnected ? "Continue" : "Connect Wallet"}
+          title={isConnected ? "Continue" : "Connect AppKitWallet"}
           onPress={handleConnectWallet}
-          disabled={!userType || isLoading}
-          loading={isLoading}
+          disabled={!userType || isLoading || connectingWallet}
+          loading={isLoading || connectingWallet}
           style={styles.connectButton}
         />
         

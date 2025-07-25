@@ -18,6 +18,7 @@ import TrackOrderScreen from '../screens/shared/TrackOrderScreen';
 import SettingsScreen from '../screens/settings/SettingsScreen';
 import FarmerOrdersScreen from '../screens/farmer/FarmerOrdersScreen';
 import BuyerOrdersScreen from '../screens/buyer/BuyerOrdersScreen';
+import ChatScreen from '../screens/chat/ChatScreen';
 
 // Define navigation types
 export type RootStackParamList = {
@@ -28,6 +29,7 @@ export type RootStackParamList = {
   CropDetail: { listingId: number };
   MakeOffer: { listingId: number };
   TrackOrder: { orderId: number | string };
+  Chat: { recipientId: string; recipientName: string; listingId?: number };
 };
 
 export type FarmerTabParamList = {
@@ -197,6 +199,11 @@ const AppNavigator = () => {
           name="TrackOrder" 
           component={TrackOrderScreen}
           options={{ title: 'Track Order' }}
+        />
+        <Stack.Screen 
+          name="Chat" 
+          component={ChatScreen}
+          options={{ title: 'Chat' }}
         />
       </Stack.Navigator>
     </NavigationContainer>

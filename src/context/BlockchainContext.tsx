@@ -2,12 +2,33 @@ import React, { createContext, useState, useContext, useEffect, ReactNode } from
 import blockchainService from '../services/BlockchainService';
 import { CropListing, Offer, Status } from '../contracts/types';
 
+interface UserProfile {
+  id: string;
+  name: string;
+  walletAddress: string;
+  email?: string;
+  avatar?: string;
+}
+
+interface TokenBalance {
+  symbol: string;
+  balance: string;
+  value?: string; // Value in USD
+  tokenAddress: string;
+}
+
 interface BlockchainContextProps {
   account: string | null;
   isConnected: boolean;
   connectWallet: () => Promise<boolean>;
+  disconnectWallet: () => Promise<boolean>;
   isLoading: boolean;
   error: string | null;
+  userProfile: UserProfile | null;
+  tokenBalances: TokenBalance[];
+  updateUserProfile: (profile: Partial<UserProfile>) => Promise<UserProfile | null>;
+  signMessage: (message: string) => Promise<string | null>;
+  sendTransaction: (to: string, amount: string, tokenAddress?: string) => Promise<string | null>;
   listCrop: (
     cropType: string,
     quantity: number,
@@ -36,6 +57,8 @@ export const BlockchainProvider: React.FC<{ children: ReactNode }> = ({ children
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [tokenBalances, setTokenBalances] = useState<TokenBalance[]>([]);
 
   // Initialize and check for existing wallet connection
   useEffect(() => {
@@ -48,6 +71,14 @@ export const BlockchainProvider: React.FC<{ children: ReactNode }> = ({ children
         if (connected) {
           const address = await blockchainService.getAccount();
           setAccount(address);
+          
+          // Get user profile
+          const profile = await blockchainService.getUserProfile();
+          setUserProfile(profile);
+          
+          // Get token balances
+          const balances = await blockchainService.getTokenBalances();
+          setTokenBalances(balances);
         }
       } catch (err) {
         console.error('Error checking wallet connection:', err);
@@ -59,8 +90,7 @@ export const BlockchainProvider: React.FC<{ children: ReactNode }> = ({ children
     
     checkWalletConnection();
     
-    // In React Native, wallet event handling would be different
-    // This would typically be handled by the wallet connection library
+    // In React Native, wallet event handling would be handled by the AppKitWallet SDK
     
     return () => {
       // Clean up listeners if needed
@@ -78,24 +108,125 @@ export const BlockchainProvider: React.FC<{ children: ReactNode }> = ({ children
         const address = await blockchainService.getAccount();
         setAccount(address);
         setIsConnected(true);
+        
+        // Get user profile
+        const profile = await blockchainService.getUserProfile();
+        setUserProfile(profile);
+        
+        // Get token balances
+        const balances = await blockchainService.getTokenBalances();
+        setTokenBalances(balances);
+        
         return true;
       }
       
-      // If not connected, use WalletConnect or other React Native wallet connection
-      // For React Native, we'd use a different wallet connection method
-      try {
+      // Connect using AppKitWallet
+      const success = await blockchainService.connectWallet();
+      if (success) {
         const address = await blockchainService.getAccount();
         setAccount(address);
         setIsConnected(true);
+        
+        // Get user profile
+        const profile = await blockchainService.getUserProfile();
+        setUserProfile(profile);
+        
+        // Get token balances
+        const balances = await blockchainService.getTokenBalances();
+        setTokenBalances(balances);
+        
         return true;
-      } catch (walletError) {
-        setError('No wallet connection available. Please connect a wallet');
+      } else {
+        setError('Failed to connect wallet');
         return false;
       }
     } catch (err) {
       console.error('Error connecting wallet:', err);
       setError('Failed to connect wallet');
       return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Disconnect wallet
+  const disconnectWallet = async (): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const success = await blockchainService.disconnectWallet();
+      if (success) {
+        setAccount(null);
+        setIsConnected(false);
+        setUserProfile(null);
+        setTokenBalances([]);
+        return true;
+      } else {
+        setError('Failed to disconnect wallet');
+        return false;
+      }
+    } catch (err) {
+      console.error('Error disconnecting wallet:', err);
+      setError('Failed to disconnect wallet');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Update user profile
+  const updateUserProfile = async (profile: Partial<UserProfile>): Promise<UserProfile | null> => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const updatedProfile = await blockchainService.updateUserProfile(profile);
+      if (updatedProfile) {
+        setUserProfile(updatedProfile);
+        return updatedProfile;
+      } else {
+        setError('Failed to update profile');
+        return null;
+      }
+    } catch (err) {
+      console.error('Error updating user profile:', err);
+      setError('Failed to update profile');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Sign message
+  const signMessage = async (message: string): Promise<string | null> => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const signature = await blockchainService.signMessage(message);
+      return signature;
+    } catch (err) {
+      console.error('Error signing message:', err);
+      setError('Failed to sign message');
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Send transaction
+  const sendTransaction = async (to: string, amount: string, tokenAddress?: string): Promise<string | null> => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const txHash = await blockchainService.sendTransaction(to, amount, tokenAddress);
+      return txHash;
+    } catch (err) {
+      console.error('Error sending transaction:', err);
+      setError('Failed to send transaction');
+      return null;
     } finally {
       setIsLoading(false);
     }
@@ -285,8 +416,14 @@ export const BlockchainProvider: React.FC<{ children: ReactNode }> = ({ children
         account,
         isConnected,
         connectWallet,
+        disconnectWallet,
         isLoading,
         error,
+        userProfile,
+        tokenBalances,
+        updateUserProfile,
+        signMessage,
+        sendTransaction,
         listCrop,
         makeOffer,
         acceptOffer,

@@ -124,7 +124,7 @@ const FarmerHomeScreen: React.FC = () => {
   
   // Navigate to crop detail
   const handleViewListing = (listingId: number) => {
-    navigation.navigate('CropDetail', { listingId });
+    navigation.navigate('CropDetail', { listingId: listingId });
   };
   
   // Navigate to order tracking

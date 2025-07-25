@@ -6,17 +6,40 @@ import {
   ScrollView, 
   TouchableOpacity, 
   RefreshControl,
-  Alert
+  Alert,
+  Image,
+  TextInput,
+  Switch,
+  ActivityIndicator
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { useBlockchain } from '../../context/BlockchainContext';
+import { useChat } from '../../context/ChatContext';
 import { Card, Header, Section, Button, Divider, ErrorMessage } from '../../components/UI';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 const ProfileScreen: React.FC = () => {
+  const navigation = useNavigation();
   const { colors, isDarkMode, toggleTheme } = useTheme();
-  const { account, isConnected, connectWallet, isLoading, error } = useBlockchain();
+  const { 
+    account, 
+    isConnected, 
+    connectWallet, 
+    disconnectWallet,
+    userProfile,
+    tokenBalances,
+    updateUserProfile,
+    isLoading, 
+    error 
+  } = useBlockchain();
+  const { unreadCount } = useChat();
+  
   const [refreshing, setRefreshing] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editableProfile, setEditableProfile] = useState<any>(null);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [isFarmer, setIsFarmer] = useState(true);
   
   // Mock data for development
   const [farmerStats] = useState({
@@ -36,33 +59,86 @@ const ProfileScreen: React.FC = () => {
     paymentSuccess: '100%'
   });
   
+  // Initialize editable profile when user profile changes
+  useEffect(() => {
+    if (userProfile) {
+      setEditableProfile({
+        name: userProfile.name || '',
+        email: userProfile.email || '',
+        avatar: userProfile.avatar || ''
+      });
+    }
+  }, [userProfile]);
+  
   // Handle refresh
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setRefreshing(true);
-    // Here you would fetch fresh data from the blockchain
-    // For now, we'll just simulate a delay
-    setTimeout(() => {
+    // Refresh token balances and profile info
+    try {
+      // In a real implementation, we would fetch updated data here
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    } finally {
       setRefreshing(false);
-    }, 1000);
+    }
   };
   
-  // Disconnect wallet (mock function)
-  const handleDisconnect = () => {
+  // Handle profile edit
+  const handleEditProfile = () => {
+    setIsEditing(true);
+  };
+  
+  // Handle profile save
+  const handleSaveProfile = async () => {
+    setSavingProfile(true);
+    try {
+      await updateUserProfile(editableProfile);
+      setIsEditing(false);
+      Alert.alert('Success', 'Your profile has been updated.');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update profile. Please try again.');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+  
+  // Cancel profile editing
+  const handleCancelEdit = () => {
+    if (userProfile) {
+      setEditableProfile({
+        name: userProfile.name || '',
+        email: userProfile.email || '',
+        avatar: userProfile.avatar || ''
+      });
+    }
+    setIsEditing(false);
+  };
+  
+  // Disconnect wallet
+  const handleDisconnect = async () => {
     Alert.alert(
-      'Disconnect Wallet',
-      'Are you sure you want to disconnect your wallet?',
+      'Disconnect AppKitWallet',
+      'Are you sure you want to disconnect your wallet? You will need to reconnect to access the marketplace.',
       [
         { text: 'Cancel', style: 'cancel' },
         { 
           text: 'Disconnect', 
           style: 'destructive', 
-          onPress: () => {
-            // In a real app, you would disconnect the wallet here
-            Alert.alert('Wallet disconnected');
+          onPress: async () => {
+            try {
+              await disconnectWallet();
+              navigation.navigate('Welcome' as never);
+            } catch (error) {
+              Alert.alert('Error', 'Failed to disconnect wallet. Please try again.');
+            }
           }
         }
       ]
     );
+  };
+  
+  // Toggle between farmer and buyer roles
+  const toggleRole = () => {
+    setIsFarmer(!isFarmer);
   };
   
   // Format wallet address for display
@@ -113,7 +189,7 @@ const ProfileScreen: React.FC = () => {
             <View style={styles.walletTag}>
               <Ionicons name="wallet-outline" size={14} color={colors.primary} />
               <Text style={[styles.walletText, { color: colors.primary }]}>
-                Ethereum Wallet
+                AppKitWallet
               </Text>
             </View>
           </View>
@@ -121,24 +197,53 @@ const ProfileScreen: React.FC = () => {
         
         <Divider />
         
+        {isConnected && tokenBalances && (
+          <>
+            <Divider />
+            <View style={styles.balanceContainer}>
+              <Text style={[styles.balanceLabel, { color: colors.gray }]}>Wallet Balance:</Text>
+              <View style={styles.balanceRow}>
+                {tokenBalances.map((token, index) => (
+                  <View key={index} style={styles.tokenBalance}>
+                    <Text style={[styles.tokenAmount, { color: colors.text }]}>
+                      {token.balance}
+                    </Text>
+                    <Text style={[styles.tokenSymbol, { color: colors.primary }]}>
+                      {token.symbol}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          </>
+        )}
+        
         <View style={styles.profileActions}>
           {isConnected ? (
             <Button
-              title="Disconnect Wallet"
+              title="Disconnect AppKitWallet"
               onPress={handleDisconnect}
               type="outline"
               style={{ flex: 1 }}
             />
           ) : (
             <Button
-              title="Connect Wallet"
+              title="Connect AppKitWallet"
               onPress={connectWallet}
               loading={isLoading}
               style={{ flex: 1 }}
             />
           )}
           
-          <TouchableOpacity style={[styles.copyButton, { backgroundColor: colors.secondary + '20' }]}>
+          <TouchableOpacity 
+            style={[styles.copyButton, { backgroundColor: colors.secondary + '20' }]}
+            onPress={() => {
+              if (account) {
+                // In a real app, you would copy the address to clipboard
+                Alert.alert('Copied', 'Wallet address copied to clipboard');
+              }
+            }}
+          >
             <Ionicons name="copy-outline" size={20} color={colors.secondary} />
           </TouchableOpacity>
         </View>
@@ -252,6 +357,126 @@ const ProfileScreen: React.FC = () => {
             <Text style={[styles.paymentText, { color: colors.success }]}>
               {buyerStats.paymentSuccess} Payment Success Rate
             </Text>
+          </View>
+        </Card>
+      </Section>
+      
+      <Section title="Profile Information">
+        {isConnected && !isEditing && (
+          <TouchableOpacity 
+            onPress={handleEditProfile} 
+            style={{ position: 'absolute', right: 16, top: 16 }}
+          >
+            <Ionicons name="pencil-outline" size={22} color={colors.primary} />
+          </TouchableOpacity>
+        )}
+        <Card>
+          {isEditing ? (
+            <View style={styles.editFormContainer}>
+              <View style={styles.formGroup}>
+                <Text style={[styles.formLabel, { color: colors.gray }]}>Name</Text>
+                <TextInput 
+                  style={[
+                    styles.formInput, 
+                    { 
+                      color: colors.text,
+                      borderColor: colors.border,
+                      backgroundColor: colors.card 
+                    }
+                  ]}
+                  value={editableProfile?.name}
+                  onChangeText={(text) => setEditableProfile({...editableProfile, name: text})}
+                  placeholder="Your name"
+                  placeholderTextColor={colors.gray}
+                />
+              </View>
+              
+              <View style={styles.formGroup}>
+                <Text style={[styles.formLabel, { color: colors.gray }]}>Email</Text>
+                <TextInput 
+                  style={[
+                    styles.formInput, 
+                    { 
+                      color: colors.text,
+                      borderColor: colors.border,
+                      backgroundColor: colors.card 
+                    }
+                  ]}
+                  value={editableProfile?.email}
+                  onChangeText={(text) => setEditableProfile({...editableProfile, email: text})}
+                  placeholder="Your email"
+                  placeholderTextColor={colors.gray}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </View>
+              
+              <View style={styles.editActions}>
+                <Button 
+                  title="Cancel" 
+                  onPress={handleCancelEdit}
+                  type="outline"
+                  style={{ flex: 1, marginRight: 8 }} 
+                />
+                <Button 
+                  title="Save" 
+                  onPress={handleSaveProfile}
+                  loading={savingProfile}
+                  style={{ flex: 1 }} 
+                />
+              </View>
+            </View>
+          ) : (
+            <View>
+              <View style={styles.profileDetailItem}>
+                <Ionicons name="person-outline" size={20} color={colors.primary} />
+                <Text style={[styles.profileDetailLabel, { color: colors.gray }]}>Name:</Text>
+                <Text style={[styles.profileDetailValue, { color: colors.text }]}>
+                  {userProfile?.name || 'Not set'}
+                </Text>
+              </View>
+              
+              <Divider />
+              
+              <View style={styles.profileDetailItem}>
+                <Ionicons name="mail-outline" size={20} color={colors.primary} />
+                <Text style={[styles.profileDetailLabel, { color: colors.gray }]}>Email:</Text>
+                <Text style={[styles.profileDetailValue, { color: colors.text }]}>
+                  {userProfile?.email || 'Not set'}
+                </Text>
+              </View>
+              
+              <Divider />
+              
+              <View style={styles.profileDetailItem}>
+                <Ionicons name="calendar-outline" size={20} color={colors.primary} />
+                <Text style={[styles.profileDetailLabel, { color: colors.gray }]}>Member Since:</Text>
+                <Text style={[styles.profileDetailValue, { color: colors.text }]}>
+                  {/* Use a placeholder date for now */}
+                  {new Date().toLocaleDateString()}
+                </Text>
+              </View>
+            </View>
+          )}
+        </Card>
+      </Section>
+      
+      <Section title="Account Type">
+        <Card>
+          <View style={styles.roleToggleContainer}>
+            <Text style={[styles.roleLabel, { color: colors.text }]}>
+              I am a {isFarmer ? 'Farmer' : 'Buyer'}
+            </Text>
+            <View style={styles.roleToggleRow}>
+              <Text style={[styles.roleText, { color: isFarmer ? colors.primary : colors.gray }]}>Farmer</Text>
+              <Switch
+                value={!isFarmer}
+                onValueChange={toggleRole}
+                trackColor={{ false: colors.primary + '50', true: colors.secondary + '50' }}
+                thumbColor={isFarmer ? colors.primary : colors.secondary}
+              />
+              <Text style={[styles.roleText, { color: !isFarmer ? colors.secondary : colors.gray }]}>Buyer</Text>
+            </View>
           </View>
         </Card>
       </Section>
@@ -420,6 +645,89 @@ const styles = StyleSheet.create({
     marginTop: 24,
     textAlign: 'center',
     fontSize: 14,
+  },
+  balanceContainer: {
+    padding: 16,
+  },
+  balanceLabel: {
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  balanceRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  tokenBalance: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 16,
+    marginBottom: 8,
+  },
+  tokenAmount: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginRight: 4,
+  },
+  tokenSymbol: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  // Profile details styles
+  profileDetailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  profileDetailLabel: {
+    fontSize: 14,
+    marginLeft: 12,
+    width: 100,
+  },
+  profileDetailValue: {
+    fontSize: 16,
+    flex: 1,
+    textAlign: 'right',
+  },
+  // Form styles for profile editing
+  editFormContainer: {
+    padding: 16,
+  },
+  formGroup: {
+    marginBottom: 16,
+  },
+  formLabel: {
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  formInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+  },
+  editActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 24,
+  },
+  // Role toggle styles
+  roleToggleContainer: {
+    padding: 16,
+    alignItems: 'center',
+  },
+  roleLabel: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  roleToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  roleText: {
+    fontSize: 16,
+    marginHorizontal: 12,
   },
 });
 
